@@ -1,0 +1,142 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{cite}
+
+\begin{document}
+
+\title{Formulación y Búsqueda Ciega en Espacios de Estados: Problema de los Misioneros y Caníbales}
+
+\author{Peñafiel Jacome Melanie Dayana\inst{1}}
+\authorrunning{Melanie Peñafiel}
+\institute{Escuela Politécnica Nacional, Inteligencia Artificial (ICCD523). Quito, Ecuador\\
+\email{melanie.penafiel@epn.edu.ec}\\
+
+\maketitle
+
+\begin{abstract}
+En este informe se analiza el problema de los tres misioneros y tres caníbales, junto con su implementación en Python. Se implementaron los algoritmos de búsqueda en anchura (BFS) y búsqueda en profundidad (DFS), empleando control de estados visitados para evitar ciclos. Asimismo, se realizó una comparación de ambas estrategias de búsqueda a partir de diferentes métricas de desempeño.
+
+\keywords{IA \and Búsqueda No Informada \and BFS \and DFS \and Espacio de Estados \and Misioneros y Caníbales.}
+\end{abstract}
+
+\section{Introducción}
+El estudio de los algoritmos de búsqueda no informada o a ciegas constituye uno de los pilares fundamentales en la solución de problemas mediante Inteligencia Artificial (IA). El problema de los misioneros y caníbales es un enigma clásico formalizado originalmente por Saul Amarel en 1968, utilizado para ilustrar cómo el esquema de representación formal e implícito de un problema modifica de manera sustancial la complejidad computacional requerida para resolverlo \cite{amarel1968}.
+
+En este trabajo se aborda el reto de trasladar de manera segura a tres misioneros y tres caníbales de la orilla izquierda a la orilla derecha de un río mediante una embarcación con capacidad limitada. El propósito central es construir el modelo formal del espacio de estados, abstraerlo mediante un script en Python y llevar a cabo una evaluación empírica comparativa entre Búsqueda en Anchura (BFS) y Búsqueda en Profundidad (DFS).
+
+\section{Marco Teórico}
+
+\subsection{Búsqueda No Informada}
+Los métodos de búsqueda a ciegas no disponen de información adicional respecto al costo o la distancia estimada hacia el estado objetivo, basando su decisión de expansión únicamente en la estructura del grafo de estados \cite{russell2020}.
+
+\begin{itemize}
+    \item \textbf{Búsqueda en Anchura (BFS):} Explora el espacio de estados nivel por nivel expandiendo primeramente el nodo más somero no visitado. Se implementa mediante una estructura de datos tipo cola FIFO (First-In, First-Out). Garantiza la optimalidad en la longitud del camino cuando el costo de los pasos es uniforme \cite{cormen2009}.
+    \item \textbf{Búsqueda en Profundidad (DFS):} Explora el espacio de estados descendiendo por una sola rama hasta alcanzar la máxima profundidad o un callejón sin salida antes de realizar el retroceso (\textit{backtracking}). Se implementa mediante una estructura de pila LIFO (Last-In, First-Out). No garantiza la optimalidad del camino en grafos no acotados o con ciclos.
+\end{itemize}
+
+\section{Formulación Teórica del Problema}
+
+El problema de los misioneros y caníbales se formula rigurosamente como un problema de búsqueda en espacio de estados de la siguiente manera:
+
+\subsection{Estado Inicial y Estado Objetivo}
+Un estado se define formalmente como una tupla ordenada $s = (m, c, b)$, donde $m \in \{0, 1, 2, 3\}$ representa el número de misioneros en la orilla izquierda, $c \in \{0, 1, 2, 3\}$ representa el número de caníbales en la orilla izquierda, y $b \in \{0, 1\}$ indica la posición del bote ($b = 1$ en la orilla izquierda, $b = 0$ en la orilla derecha). La cantidad de personas en la orilla derecha se infiere directamente como $(3-m)$ misioneros y $(3-c)$ caníbales.
+
+Un estado $s = (m, c, b)$ es \textbf{válido} si y solo si respeta la restricción de seguridad en ambas orillas:
+\begin{equation}
+(m = 0 \lor m \ge c) \land ((3-m) = 0 \lor (3-m) \ge (3-c))
+\end{equation}
+
+\begin{itemize}
+    \item \textbf{Estado Inicial ($s_0$):} Todos empiezan en la orilla izquierda con el bote.
+    \begin{equation}
+    s_0 = (3, 3, 1)
+    \end{equation}
+    \item \textbf{Estado Objetivo ($IsGoal(s)$):} Todos han cruzado a la orilla derecha.
+    \begin{equation}
+    IsGoal(s) = \{(0, 0, 0)\}
+    \end{equation}
+\end{itemize}
+
+\subsection{Conjunto de Acciones Posibles}
+Una acción indica cuántos misioneros y cuántos caníbales suben al bote. Se representa como un par $a = (x, y)$, donde $x$ es la cantidad de misioneros y $y$ la cantidad de caníbales que se mueven en el bote. Se debe tomar en cuenta que la capacidad del bote está acotada entre 1 y 2 personas, no puede ir vacío.
+\begin{equation}
+A = \{(1,0), (2,0), (0,1), (0,2), (1,1)\}
+\end{equation}
+
+\subsection{Modelo de transición}
+
+El modelo de transición describe cómo cambia un estado cuando se realiza un cruce en bote. Dado un estado $s=(m,c,b)$ y una acción $a=(x,y)$, donde $x$ y $y$ representan la cantidad de misioneros y caníbales que se trasladan, el nuevo estado se obtiene mediante:
+
+\begin{equation}
+\text{Resultado}(s,a)=\left(m-\sigma(b)x,\; c-\sigma(b)y,\; 1-b\right)
+\end{equation}
+
+donde
+
+\[
+\sigma(b)=2b-1=
+\begin{cases}
+1, & \text{si el bote está en la orilla izquierda } (b=1),\\
+-1, & \text{si el bote está en la orilla derecha } (b=0).
+\end{cases}
+\]
+
+De esta manera, cuando el bote se encuentra en la orilla izquierda, las personas que suben al bote abandonan dicha orilla y los valores de $m$ y $c$ disminuyen. En cambio, cuando el bote está en la orilla derecha, las personas regresan a la izquierda y estas cantidades aumentan.
+
+\section{Benchmarking y Análisis Empírico}
+
+Se obtuvieron los siguientes resultados al implementar los algoritmos BFS (empleando una cola FIFO) y DFS (empleando una pila LIFO) en Python, manteniendo una estructura de nodos visitados (\textit{explored set}) para prevenir ciclos de exploración en el grafo. 
+
+\begin{table}[h]
+
+\label{tab:benchmarking}
+\centering
+\begin{tabular}{l c c c}
+\toprule
+\textbf{Algoritmo} & \textbf{Nodos Expandidos} & \textbf{Tiempo de Ejecución (s)} & \textbf{Longitud del Camino (Pasos)} \\
+\midrule
+\textbf{BFS (Cola FIFO)} & 15 & $1.93 \times 10^{-5}$ & 11 \\
+\textbf{DFS (Pila LIFO)} & 12 & $1.62 \times 10^{-5}$ & 11 \\
+\bottomrule
+\end{tabular}
+\caption{Comparativa de rendimiento empírico entre BFS y DFS en el problema de los Misioneros y Caníbales ($N=3$, capacidad bote=2).}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{BFS} expandió 15 nodos para encontrar la solución óptima de 11 acciones.
+    \item \textbf{DFS} expandió 12 nodos, alcanzando también una solución de 11 pasos en este experimento. La ligera reducción en el tiempo de ejecución de DFS ($1.62 \times 10^{-5}$ s frente a $1.93 \times 10^{-5}$ s) responde a la menor cantidad de operaciones de inserción/extracción en la frontera.
+\end{itemize}
+
+\subsection{Análisis del Rendimiento}
+De los 32 estados matemáticamente posibles ($4 \times 4 \times 2$), únicamente 20 estados cumplen con la restricción de validez y solo 16 estados válidos son alcanzables desde el estado inicial $s_0$. 
+
+\section{Conclusión Crítica}
+
+\subsection{¿Por qué los resultados asintóticos difieren entre ambos algoritmos para este problema en particular?}
+
+Aunque en teoría BFS y DFS tienen diferencias grandes en complejidad, en este problema esas diferencias no se reflejan porque el espacio de estados es muy pequeño y limitado. Además, al utilizar una lista de estados visitados, cada estado se explora solo una vez, evitando repetir caminos innecesarios y reduciendo la complejidad temporal. Por esta razón, ambos algoritmos terminan recorriendo una cantidad reducida de estados y su rendimiento resulta muy similar.
+
+\subsection{¿DFS garantizó el camino más corto?}
+
+No necesariamente. En el problema de los 3 misioneros y 3 caníbales, DFS encontró una solución de 11 pasos, igual que BFS. Sin embargo, esto ocurrió porque el espacio de estados es pequeño y todos los caminos válidos hacia la meta tienen la misma longitud. Por lo tanto, cualquier recorrido sin ciclos termina encontrando una solución óptima. Aun así, DFS no garantiza obtener siempre el mejor resultado. En problemas más grandes o con más alternativas de recorrido, puede seguir caminos más largos y generar soluciones menos eficientes. En cambio, BFS sí garantiza encontrar la solución de menor longitud cuando todos los movimientos tienen el mismo costo.
+
+\subsection{¿Por qué BFS consumió más memoria?}
+
+En este problema, BFS consumió más memoria principalmente por la estructura de datos utilizada para gestionar la frontera de búsqueda. Aunque teóricamente BFS suele requerir más memoria porque almacena todos los estados de un mismo nivel antes de continuar, en esta instancia el espacio de estados es muy pequeño y la diferencia en la cantidad de nodos almacenados fue mínima. De hecho, las mediciones mostraron que el mayor consumo de memoria provino del uso de una cola (deque) en BFS, que ocupa más espacio que la lista utilizada por DFS. Por ello, la diferencia observada estuvo más relacionada con la implementación que con el comportamiento propio de los algoritmos.
+
+\begin{thebibliography}{99}
+\bibitem{amarel1968}
+Amarel, S.: On representations of problems of reasoning about actions. Machine Intelligence 3, pp. 131--171 (1968).
+
+\bibitem{russell2020}
+Russell, S., Norvig, P.: Artificial Intelligence: A Modern Approach. 4th edn. Pearson (2020).
+
+\bibitem{cormen2009}
+Cormen, T.H., Leiserson, C.E., Rivest, R.L., Stein, C.: Introduction to Algorithms. 3rd edn. MIT Press (2009).
+\end{thebibliography}
+
+\end{document}
